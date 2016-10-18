@@ -37,20 +37,26 @@ app.get('/user', authJWT.ensureAuthenticated, function(req, res, next) {
 app.post('/loguser', authJWT.ensureAuthenticated, function(req, res, next) {
 	console.log('Request URL: /user');
 	// var authHeader = req.headers.authorization.split(" ")
-	console.log(req.body)
-	var payload = authJWT.getPayload(req.token)
+	console.log(req.body,req.connection.remoteAddress)
+	// var payload = authJWT.getPayload(req.token)
 	redisDB
-		.set('loguser:'+payload.id,JSON.stringify({ip:"127.0.0.1","accion":req.body.accion,time:Date.now()}))
+		.sadd(
+			'loguser:'+req.payload.id
+		,	JSON.stringify({
+				ip:req.connection.remoteAddress
+			,	"accion":req.body.accion
+			,	time:Date.now()
+			})
+		)
 		.then(
 			(result)=> {
-				console.log(result,JSON.parse(result))
 				if(!result) {
-					res.json({"msg":"No se encuentran usuarios"})
+					res.json({"msg":"Hubo un error al insertar el log"})
 				}
-				res.json(result)
+				res.json({"msg":"Logueo agregado"})
 			}
 		, 	(err) => {
-				res.end("No hay nada")
+				res.json({"msg":"Hubo un error al insertar el log"})
 			}
 		);
 });
@@ -71,7 +77,14 @@ app.post('/auth', function(req, res, next) {
 					.then(
 						() => {
 							redisDB
-								.sad('loguser:'+payload.id,JSON.stringify({ip:"127.0.0.1","accion":"Ingreso",time:Date.now()}))
+								.sadd(
+									'loguser:'+payload.id
+								,	JSON.stringify({
+										ip:req.connection.remoteAddress
+									,	"accion":"Ingreso"
+									,	time:Date.now()
+									})
+								)
 								.then(
 									(result)=> {
 										console.log("LogUser ingreso")
